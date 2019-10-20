@@ -144,6 +144,7 @@ struct _block *growHeap(struct _block *last, size_t size)
       last->next = curr;
    }
 
+   max_heap += size;
    /* Update _block metadata */
    curr->size = size;
    curr->next = NULL;
@@ -185,7 +186,18 @@ void *malloc(size_t size)
    struct _block *last = freeList;
    struct _block *next = findFreeBlock(&last, size);
 
-   /* TODO: Split free _block if possible */
+   /* Split free _block if possible */
+   if(next && next->size > size){
+      ++num_splits;
+      size_t split_size = next->size - size ;
+      struct _block *split_block = (struct _block *)sbrk(sizeof(struct _block) + split_size);
+      split_block->prev = next;
+      split_block->next = next->next;
+      split_block->size = split_size;
+      split_block->free = true;
+      next->next = split_block;
+      ++num_blocks;
+   }
 
    /* Could not find free _block, so grow heap */
    if (next == NULL) 
@@ -231,23 +243,23 @@ void free(void *ptr)
    ++num_frees;
    
    // Creates a struct for the next pointer
-   struct _block *nextPointer = curr->next;
+   struct _block *next_pointer = curr->next;
    // Coalesces if the next block is free
-   while(curr && nextPointer && curr->free && nextPointer->free){
-      curr->size = nextPointer->size + curr->size;
-      curr->next = nextPointer->next; 
-      nextPointer = curr->next;
+   while(curr && next_pointer && curr->free && next_pointer->free){
+      curr->size = next_pointer->size + curr->size + sizeof(struct _block);
+      curr->next = next_pointer->next; 
+      next_pointer = curr->next;
       ++num_coalesces;
       --num_blocks;
    }
 
    // Creates a struct for a previous pointer
-   struct _block *prevPointer = curr->prev;
+   struct _block *prev_pointer = curr->prev;
    // Coalesces if the previous block is free
-   while(curr && prevPointer && curr->free && prevPointer->free){
-      curr->size = prevPointer->size + curr->size;
-      curr->prev = prevPointer->prev; 
-      prevPointer = curr->prev;
+   while(curr && prev_pointer && curr->free && prev_pointer->free){
+      curr->size = prev_pointer->size + curr->size + sizeof(struct _block);
+      curr->prev = prev_pointer->prev; 
+      prev_pointer = curr->prev;
       ++num_coalesces;
       --num_blocks;
    }
