@@ -1,3 +1,9 @@
+// name: Imtiaz Mujtaba Khaled
+// id: 1001551928
+
+// name: Nahian Alam
+// id:
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -79,17 +85,21 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
       *last = curr;
       curr  = curr->next;
    }
+   ++num_mallocs;
 #endif
 
 #if defined BEST && BEST == 0
+   ++num_mallocs;
    printf("TODO: Implement best fit here\n");
 #endif
 
 #if defined WORST && WORST == 0
+   ++num_mallocs;
    printf("TODO: Implement worst fit here\n");
 #endif
 
 #if defined NEXT && NEXT == 0
+   ++num_mallocs;
    printf("TODO: Implement next fit here\n");
 #endif
 
@@ -155,7 +165,7 @@ struct _block *growHeap(struct _block *last, size_t size)
  */
 void *malloc(size_t size) 
 {
-
+   num_requested += size;
    if( atexit_registered == 0 )
    {
       atexit_registered = 1;
@@ -215,10 +225,50 @@ void free(void *ptr)
 
    /* Make _block as free */
    struct _block *curr = BLOCK_HEADER(ptr);
+   
    assert(curr->free == 0);
    curr->free = true;
+   ++num_frees;
+   
+   // Creates a struct for the next pointer
+   struct _block *nextPointer = curr->next;
+   // Coalesces if the next block is free
+   while(curr && nextPointer && curr->free && nextPointer->free){
+      curr->size = nextPointer->size + curr->size;
+      curr->next = nextPointer->next; 
+      nextPointer = curr->next;
+      ++num_coalesces;
+      --num_blocks;
+   }
 
-   /* TODO: Coalesce free _blocks if needed */
+   // Creates a struct for a previous pointer
+   struct _block *prevPointer = curr->prev;
+   // Coalesces if the previous block is free
+   while(curr && prevPointer && curr->free && prevPointer->free){
+      curr->size = prevPointer->size + curr->size;
+      curr->prev = prevPointer->prev; 
+      prevPointer = curr->prev;
+      ++num_coalesces;
+      --num_blocks;
+   }
+
+   // struct _block *freeListIter = freeList;
+   // while(freeListIter->next){
+   //    printf("freelist pointer %p\n", freeListIter);
+   //    freeListIter = freeListIter->next;
+   // }
+   // printf("made it out of the loop\n");
+   // freeListIter->next = curr;
+   // printf("made it past freelistnext pointer\n");
+
+
+   // // Gets the last element in the free list
+   // and adds the current free block to it
+   //    while(freeListIter){
+   //       freeListIter = freeListIter->next;
+   //    }
+   // freeListIter->next = curr;
+
 }
 
 /* vim: set expandtab sts=3 sw=3 ts=6 ft=cpp: --------------------------------*/
