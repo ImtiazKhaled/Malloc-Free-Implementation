@@ -1,0 +1,11 @@
+.vscode
+/lib/libmalloc-bf.so
+/lib/libmalloc-wf.so
+/lib/libmalloc-nf.so
+/lib/libmalloc-ff.so
+/tests/bfwf
+/tests/ffnf
+/tests/test1
+/tests/test2
+/tests/test3
+/tests/test4

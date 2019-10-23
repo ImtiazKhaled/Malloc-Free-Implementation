@@ -36,8 +36,7 @@ static int max_heap          = 0;
  *
  *  \return none
  */
-void printStatistics( void )
-{
+void printStatistics( void ){
   printf("\nheap management statistics\n");
   printf("mallocs:\t%d\n", num_mallocs );
   printf("frees:\t\t%d\n", num_frees );
@@ -50,8 +49,7 @@ void printStatistics( void )
   printf("max heap:\t%d\n", max_heap );
 }
 
-struct _block 
-{
+struct _block {
    size_t  size;         /* Size of the allocated _block of memory in bytes */
    struct _block *prev;  /* Pointer to the previous _block of allcated memory   */
    struct _block *next;  /* Pointer to the next _block of allcated memory   */
@@ -61,6 +59,8 @@ struct _block
 
 
 struct _block *freeList = NULL; /* Free list to track the _blocks available */
+
+// struct _block *rovingPointer = freeList;
 
 /*
  * \brief findFreeBlock
@@ -80,22 +80,51 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 
 #if defined FIT && FIT == 0
    /* First fit */
-   while (curr && !(curr->free && curr->size >= size)) 
-   {
+   while (curr && !(curr->free && curr->size >= size)) {
       *last = curr;
       curr  = curr->next;
+      curr->prev = *last;
    }
    ++num_mallocs;
 #endif
 
 #if defined BEST && BEST == 0
+   /* Best fit */
+   struct _block *best = NULL;
+   while ( curr ) {
+      if( best == NULL ) {
+         if( curr->free && curr->size >= size ){
+            best = curr;
+         }
+      }
+      else if( !(best == NULL) && (curr->free) && (curr->size < best->size) && (curr->size >= size) ){
+         best = curr;
+      }
+      *last = curr;
+      curr = curr->next;
+   }
+   curr = best;
    ++num_mallocs;
-   printf("TODO: Implement best fit here\n");
 #endif
 
 #if defined WORST && WORST == 0
+   /* Worst fit */
+   struct _block *worst = NULL;
+   // worst = curr;
+   while ( curr ) {
+      if( worst == NULL ) {
+         if( curr->free && curr->size >= size ){
+            worst = curr;
+         }
+      }
+      else if( !(worst == NULL) && (curr->free) && (curr->size > worst->size) ){
+         worst = curr;
+      }
+      *last = curr;
+      curr = curr->next;
+   }
+   curr = worst;
    ++num_mallocs;
-   printf("TODO: Implement worst fit here\n");
 #endif
 
 #if defined NEXT && NEXT == 0
@@ -118,8 +147,7 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
  *
  * \return returns the newly allocated _block of NULL if failed
  */
-struct _block *growHeap(struct _block *last, size_t size) 
-{
+struct _block *growHeap(struct _block *last, size_t size) {
    /* Request more space from OS */
    struct _block *curr = (struct _block *)sbrk(0);
    struct _block *prev = (struct _block *)sbrk(sizeof(struct _block) + size);
@@ -164,8 +192,7 @@ struct _block *growHeap(struct _block *last, size_t size)
  * \return returns the requested memory allocation to the calling process 
  * or NULL if failed
  */
-void *malloc(size_t size) 
-{
+void *malloc(size_t size) {
    num_requested += size;
    if( atexit_registered == 0 )
    {
@@ -228,10 +255,8 @@ void *malloc(size_t size)
  *
  * \return none
  */
-void free(void *ptr) 
-{
-   if (ptr == NULL) 
-   {
+void free(void *ptr) {
+   if (ptr == NULL) {
       return;
    }
 
@@ -245,7 +270,7 @@ void free(void *ptr)
    // Creates a struct for the next pointer
    struct _block *next_pointer = curr->next;
    // Coalesces if the next block is free
-   while(curr && next_pointer && curr->free && next_pointer->free){
+   while(curr && next_pointer && curr->free && next_pointer->free) {
       curr->size = next_pointer->size + curr->size + sizeof(struct _block);
       curr->next = next_pointer->next; 
       next_pointer = curr->next;
@@ -256,14 +281,14 @@ void free(void *ptr)
    // Creates a struct for a previous pointer
    struct _block *prev_pointer = curr->prev;
    // Coalesces if the previous block is free
-   while(curr && prev_pointer && curr->free && prev_pointer->free){
+   while(curr && prev_pointer && curr->free && prev_pointer->free) {
       curr->size = prev_pointer->size + curr->size + sizeof(struct _block);
       curr->prev = prev_pointer->prev; 
       prev_pointer = curr->prev;
       ++num_coalesces;
       --num_blocks;
    }
-
+   
    // struct _block *freeListIter = freeList;
    // while(freeListIter->next){
    //    printf("freelist pointer %p\n", freeListIter);
