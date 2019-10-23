@@ -167,6 +167,8 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
  */
 struct _block *growHeap(struct _block *last, size_t size) {
    /* Request more space from OS */
+   ++num_grows;
+   ++num_blocks;
    struct _block *curr = (struct _block *)sbrk(0);
    struct _block *prev = (struct _block *)sbrk(sizeof(struct _block) + size);
 
@@ -248,6 +250,8 @@ void *malloc(size_t size) {
    if (next == NULL) 
    {
       next = growHeap(last, size);
+   }else {
+      ++num_reuses;
    }
 
    /* Could not find free _block or grow heap, so just return NULL */
@@ -306,23 +310,6 @@ void free(void *ptr) {
       ++num_coalesces;
       --num_blocks;
    }
-   
-   // struct _block *freeListIter = freeList;
-   // while(freeListIter->next){
-   //    printf("freelist pointer %p\n", freeListIter);
-   //    freeListIter = freeListIter->next;
-   // }
-   // printf("made it out of the loop\n");
-   // freeListIter->next = curr;
-   // printf("made it past freelistnext pointer\n");
-
-
-   // // Gets the last element in the free list
-   // and adds the current free block to it
-   //    while(freeListIter){
-   //       freeListIter = freeListIter->next;
-   //    }
-   // freeListIter->next = curr;
 
 }
 
