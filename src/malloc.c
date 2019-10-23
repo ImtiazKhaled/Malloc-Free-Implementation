@@ -59,6 +59,7 @@ struct _block {
 
 
 struct _block *freeList = NULL; /* Free list to track the _blocks available */
+struct _block *next = NULL; /* Free list to track the _blocks available */
 
 // struct _block *rovingPointer = freeList;
 
@@ -70,9 +71,6 @@ struct _block *freeList = NULL; /* Free list to track the _blocks available */
  *
  * \return a _block that fits the request or NULL if no free _block matches
  *
- * \TODO Implement Next Fit
- * \TODO Implement Best Fit
- * \TODO Implement Worst Fit
  */
 struct _block *findFreeBlock(struct _block **last, size_t size) 
 {
@@ -83,7 +81,6 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
    while (curr && !(curr->free && curr->size >= size)) {
       *last = curr;
       curr  = curr->next;
-      curr->prev = *last;
    }
    ++num_mallocs;
 #endif
@@ -128,8 +125,29 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined NEXT && NEXT == 0
+   if( next == NULL ) {
+      while (curr && !(curr->free && curr->size >= size)) {
+         *last = curr;
+         curr  = curr->next;
+      }
+      if( curr == NULL ) {
+         next = NULL;  
+      } else {
+         next = curr->next;
+      }
+   }else{
+      curr = next;
+      while (curr && !(curr->free && curr->size >= size)) {
+         *last = curr;
+         curr  = curr->next;
+      }
+      if( curr == NULL ) {
+         next = NULL;  
+      } else {
+         next = curr->next;
+      }
+   }
    ++num_mallocs;
-   printf("TODO: Implement next fit here\n");
 #endif
 
    return curr;
