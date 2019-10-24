@@ -1,7 +1,7 @@
 // name: Imtiaz Mujtaba Khaled
 // id: 1001551928
 
-// name: Nahian Alam
+// name: Nahian Alam ( Group Leader )
 // id:
 
 #include <assert.h>
@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ALIGN4(s)         (((((s) - 1) >> 2) << 2) + 4)
 #define BLOCK_DATA(b)      ((b) + 1)
@@ -36,8 +37,7 @@ static int max_heap          = 0;
  *
  *  \return none
  */
-void printStatistics( void )
-{
+void printStatistics( void ){
   printf("\nheap management statistics\n");
   printf("mallocs:\t%d\n", num_mallocs );
   printf("frees:\t\t%d\n", num_frees );
@@ -50,17 +50,18 @@ void printStatistics( void )
   printf("max heap:\t%d\n", max_heap );
 }
 
-struct _block 
-{
+typedef struct _block {
    size_t  size;         /* Size of the allocated _block of memory in bytes */
    struct _block *prev;  /* Pointer to the previous _block of allcated memory   */
    struct _block *next;  /* Pointer to the next _block of allcated memory   */
    bool   free;          /* Is this _block free?                     */
    char   padding[3];
-};
+}_block;
 
 
-struct _block *freeList = NULL; /* Free list to track the _blocks available */
+_block *freeList = NULL; /* Free list to track the _blocks available */
+
+_block *next = NULL; /* Roving pointer for the Next Fit algorithm */
 
 /*
  * \brief findFreeBlock
@@ -70,18 +71,14 @@ struct _block *freeList = NULL; /* Free list to track the _blocks available */
  *
  * \return a _block that fits the request or NULL if no free _block matches
  *
- * \TODO Implement Next Fit
- * \TODO Implement Best Fit
- * \TODO Implement Worst Fit
  */
-struct _block *findFreeBlock(struct _block **last, size_t size) 
+_block *findFreeBlock(_block **last, size_t size) 
 {
-   struct _block *curr = freeList;
+   _block *curr = freeList;
 
 #if defined FIT && FIT == 0
    /* First fit */
-   while (curr && !(curr->free && curr->size >= size)) 
-   {
+   while (curr && !(curr->free && curr->size >= size)) {
       *last = curr;
       curr  = curr->next;
    }
@@ -89,18 +86,68 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
 #endif
 
 #if defined BEST && BEST == 0
+   /* Best fit */
+   _block *best = NULL;
+   while ( curr ) {
+      if( best == NULL ) {
+         if( curr->free && curr->size >= size ){
+            best = curr;
+         }
+      }
+      else if( !(best == NULL) && (curr->free) && (curr->size < best->size) && (curr->size >= size) ){
+         best = curr;
+      }
+      *last = curr;
+      curr = curr->next;
+   }
+   curr = best;
    ++num_mallocs;
-   printf("TODO: Implement best fit here\n");
 #endif
 
 #if defined WORST && WORST == 0
+   /* Worst fit */
+   _block *worst = NULL;
+   while ( curr ) {
+      if( worst == NULL ) {
+         if( curr->free && curr->size >= size ){
+            worst = curr;
+         }
+      }
+      else if( !(worst == NULL) && (curr->free) && (curr->size > worst->size) ){
+         worst = curr;
+      }
+      *last = curr;
+      curr = curr->next;
+   }
+   curr = worst;
    ++num_mallocs;
-   printf("TODO: Implement worst fit here\n");
 #endif
 
 #if defined NEXT && NEXT == 0
+   /* Next fit */
+   if( next == NULL ) {
+      while (curr && !(curr->free && curr->size >= size)) {
+         *last = curr;
+         curr  = curr->next;
+      }
+      if( curr == NULL ) {
+         next = NULL;  
+      } else {
+         next = curr->next;
+      }
+   }else{
+      curr = next;
+      while (curr && !(curr->free && curr->size >= size)) {
+         *last = curr;
+         curr  = curr->next;
+      }
+      if( curr == NULL ) {
+         next = NULL;  
+      } else {
+         next = curr->next;
+      }
+   }
    ++num_mallocs;
-   printf("TODO: Implement next fit here\n");
 #endif
 
    return curr;
@@ -118,16 +165,17 @@ struct _block *findFreeBlock(struct _block **last, size_t size)
  *
  * \return returns the newly allocated _block of NULL if failed
  */
-struct _block *growHeap(struct _block *last, size_t size) 
-{
+_block *growHeap(_block *last, size_t size) {
    /* Request more space from OS */
-   struct _block *curr = (struct _block *)sbrk(0);
-   struct _block *prev = (struct _block *)sbrk(sizeof(struct _block) + size);
+   ++num_grows;
+   ++num_blocks;
+   _block *curr = (_block *)sbrk(0);
+   _block *prev = (_block *)sbrk(sizeof(_block) + size);
 
    assert(curr == prev);
 
    /* OS allocation failed */
-   if (curr == (struct _block *)-1) 
+   if (curr == (_block *)-1) 
    {
       return NULL;
    }
@@ -164,8 +212,7 @@ struct _block *growHeap(struct _block *last, size_t size)
  * \return returns the requested memory allocation to the calling process 
  * or NULL if failed
  */
-void *malloc(size_t size) 
-{
+void *malloc(size_t size) {
    num_requested += size;
    if( atexit_registered == 0 )
    {
@@ -183,14 +230,16 @@ void *malloc(size_t size)
    }
 
    /* Look for free _block */
-   struct _block *last = freeList;
-   struct _block *next = findFreeBlock(&last, size);
+   _block *last = freeList;
+   _block *next = findFreeBlock(&last, size);
 
    /* Split free _block if possible */
    if(next && next->size > size){
       ++num_splits;
       size_t split_size = next->size - size ;
-      struct _block *split_block = (struct _block *)sbrk(sizeof(struct _block) + split_size);
+      // Creates a new block, with the extra space from the allocated block
+      _block *split_block = (_block *)sbrk(sizeof(_block) + split_size);
+      // Sets values for the new block
       split_block->prev = next;
       split_block->next = next->next;
       split_block->size = split_size;
@@ -200,14 +249,14 @@ void *malloc(size_t size)
    }
 
    /* Could not find free _block, so grow heap */
-   if (next == NULL) 
-   {
+   if (next == NULL) {
       next = growHeap(last, size);
+   }else {
+      ++num_reuses;
    }
 
    /* Could not find free _block or grow heap, so just return NULL */
-   if (next == NULL) 
-   {
+   if (next == NULL) {
       return NULL;
    }
    
@@ -228,25 +277,23 @@ void *malloc(size_t size)
  *
  * \return none
  */
-void free(void *ptr) 
-{
-   if (ptr == NULL) 
-   {
+void free(void *ptr) {
+   if (ptr == NULL) {
       return;
    }
 
    /* Make _block as free */
-   struct _block *curr = BLOCK_HEADER(ptr);
+   _block *curr = BLOCK_HEADER(ptr);
    
    assert(curr->free == 0);
    curr->free = true;
    ++num_frees;
    
    // Creates a struct for the next pointer
-   struct _block *next_pointer = curr->next;
+   _block *next_pointer = curr->next;
    // Coalesces if the next block is free
-   while(curr && next_pointer && curr->free && next_pointer->free){
-      curr->size = next_pointer->size + curr->size + sizeof(struct _block);
+   while(curr && next_pointer && curr->free && next_pointer->free) {
+      curr->size = next_pointer->size + curr->size + sizeof(_block);
       curr->next = next_pointer->next; 
       next_pointer = curr->next;
       ++num_coalesces;
@@ -254,32 +301,64 @@ void free(void *ptr)
    }
 
    // Creates a struct for a previous pointer
-   struct _block *prev_pointer = curr->prev;
+   _block *prev_pointer = curr->prev;
    // Coalesces if the previous block is free
-   while(curr && prev_pointer && curr->free && prev_pointer->free){
-      curr->size = prev_pointer->size + curr->size + sizeof(struct _block);
+   while(curr && prev_pointer && curr->free && prev_pointer->free) {
+      curr->size = prev_pointer->size + curr->size + sizeof(_block);
       curr->prev = prev_pointer->prev; 
       prev_pointer = curr->prev;
       ++num_coalesces;
       --num_blocks;
    }
 
-   // struct _block *freeListIter = freeList;
-   // while(freeListIter->next){
-   //    printf("freelist pointer %p\n", freeListIter);
-   //    freeListIter = freeListIter->next;
-   // }
-   // printf("made it out of the loop\n");
-   // freeListIter->next = curr;
-   // printf("made it past freelistnext pointer\n");
+}
 
+/*
+ * \brief calloc
+ *
+ * finds a free _block of heap memory for the calling process.
+ * if there is no free _block that satisfies the request then grows the 
+ * heap and returns a new _block
+ *
+ * \param nmemb number of elements the newly allocated memory is to be split into
+ * \param size size of each of the elements in the requested memeory
+ *
+ * \return returns the requested memory allocation to the calling process 
+ * or NULL if failed
+ */
+void *calloc(size_t nmemb, size_t size){
+   
+   // Calculates the total size of the requested block
+   size_t totalSize = nmemb * size;
+   // Allocates a new block of memory with total requested size
+   _block *res = malloc(totalSize);
+   // Sets the pointer value of the new block to 0
+   memset(BLOCK_DATA(res), 0, totalSize);
+   return BLOCK_DATA(res);
 
-   // // Gets the last element in the free list
-   // and adds the current free block to it
-   //    while(freeListIter){
-   //       freeListIter = freeListIter->next;
-   //    }
-   // freeListIter->next = curr;
+}
+
+/*
+ * \brief realloc
+ *
+ * gets the pointer value to a previous block of memory, and re-allocates
+ * it with more memory space
+ * 
+ * \param *ptr a pointer to the block of memory being expanded.
+ * \param size size of the new requested memory in bytes
+ * 
+ * \return returns the requested memory re-allocation to the calling process 
+ * or NULL if failed
+ */
+void *realloc(void *ptr, size_t size) {
+   
+   // Allocates a new block of memory with the new requested size
+   _block *res = malloc(size);
+   // Copies over the pointer value of the previous block to the new one
+   memcpy(BLOCK_DATA(res), BLOCK_DATA(ptr), sizeof(*ptr));
+   // Frees the previous pointer
+   free(ptr);   
+   return BLOCK_DATA(res);
 
 }
 
