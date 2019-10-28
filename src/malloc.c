@@ -82,7 +82,6 @@ _block *findFreeBlock(_block **last, size_t size)
       *last = curr;
       curr  = curr->next;
    }
-   ++num_mallocs;
 #endif
 
 #if defined BEST && BEST == 0
@@ -101,7 +100,6 @@ _block *findFreeBlock(_block **last, size_t size)
       curr = curr->next;
    }
    curr = best;
-   ++num_mallocs;
 #endif
 
 #if defined WORST && WORST == 0
@@ -120,7 +118,6 @@ _block *findFreeBlock(_block **last, size_t size)
       curr = curr->next;
    }
    curr = worst;
-   ++num_mallocs;
 #endif
 
 #if defined NEXT && NEXT == 0
@@ -147,7 +144,6 @@ _block *findFreeBlock(_block **last, size_t size)
          next = curr->next;
       }
    }
-   ++num_mallocs;
 #endif
 
    return curr;
@@ -213,6 +209,7 @@ _block *growHeap(_block *last, size_t size) {
  * or NULL if failed
  */
 void *malloc(size_t size) {
+   
    num_requested += size;
    if( atexit_registered == 0 )
    {
@@ -258,11 +255,13 @@ void *malloc(size_t size) {
    /* Could not find free _block or grow heap, so just return NULL */
    if (next == NULL) {
       return NULL;
+   }else {
+      ++num_mallocs;
    }
    
    /* Mark _block as in use */
    next->free = false;
-
+ 
    /* Return data address associated with _block */
    return BLOCK_DATA(next);
 }
