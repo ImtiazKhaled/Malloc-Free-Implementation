@@ -30,7 +30,7 @@ lib/libmalloc-bf.so:     src/malloc.c
 lib/libmalloc-wf.so:     src/malloc.c
 	$(CC) -shared -fPIC $(CFLAGS) -DWORST=0 -o $@ $< $(LDFLAGS)
 
-run_tests:	
+run_tests:
 	env LD_PRELOAD=lib/libmalloc-ff.so tests/test1 > outfile
 	env LD_PRELOAD=lib/libmalloc-ff.so tests/test2 >> outfile
 	env LD_PRELOAD=lib/libmalloc-ff.so tests/test3 >> outfile 
@@ -47,7 +47,7 @@ run_tests:
 	env LD_PRELOAD=lib/libmalloc-wf.so tests/test2 >> outfile 
 	env LD_PRELOAD=lib/libmalloc-wf.so tests/test3 >> outfile 
 	env LD_PRELOAD=lib/libmalloc-wf.so tests/test4 >> outfile 
-
+	
 clean:
 	rm -f $(LIBRARIES) $(TESTS)
 

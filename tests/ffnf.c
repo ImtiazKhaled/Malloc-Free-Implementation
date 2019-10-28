@@ -8,8 +8,8 @@ int main()
   char * ptr2 = ( char * ) malloc ( 6000 );
   char * ptr3 = ( char * ) malloc ( 1000 );
 
-  printf("First fit should pick this one: %p\n", ptr1 );
-  printf("Next fit should pick this one: %p\n", ptr3 );
+  // printf("First fit should pick this one: %p\n", ptr1 );
+  // printf("Next fit should pick this one: %p\n", ptr3 );
 
   free( ptr1 ); 
   free( ptr2 ); 
@@ -20,7 +20,7 @@ int main()
   ptr5 = ptr5;
 
   char * ptr4 = ( char * ) malloc ( 1000 );
-  printf("Chosen address: %p\n", ptr4 );
+  // printf("Chosen address: %p\n", ptr4 );
 
   return 0;
 }
